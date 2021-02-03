@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Vector;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import wt.doc.WTDocument;
@@ -29,6 +30,7 @@ import wt.log4j.LogR;
 import wt.method.RemoteMethodServer;
 import wt.part.WTPart;
 import wt.part.WTPartDescribeLink;
+import wt.pds.StatementSpec;
 import wt.pom.PersistenceException;
 import wt.pom.Transaction;
 import wt.query.QuerySpec;
@@ -40,87 +42,53 @@ import wt.util.WTRuntimeException;
 import wt.vc.VersionControlHelper;
 import wt.vc.wip.WorkInProgressHelper;
 
-public class DocumentUtil {
+public class DocumentUtility {
 	
-	private static String CLASSNAME = DocumentUtil.class.getName();
-	private final static Logger logger = LogR.getLogger(DocumentUtil.class.getName());
+	private static String CLASSNAME = DocumentUtility.class.getName();
+	private final static Logger logger = LogR.getLogger(DocumentUtility.class.getName());
 	
-	public static void createPartDocDescribeLink(WTPart thePart, WTDocument theDocument) throws WTException, WTPropertyVetoException
-	{
-		ReferenceFactory rf = new ReferenceFactory ();		
-		WTReference reference= (WTReference)rf.getReference("VR:wt.doc.WTDocument:101932");
-		theDocument = (WTDocument) reference.getObject();
-		WTCollection list = new WTArrayList();
-		list.add(theDocument);
-		createPartDocDescribeLinks(thePart, list);
-		
-	}
+	
 
-	@SuppressWarnings("unchecked")
-	public static void createPartDocDescribeLinks(WTPart thePart, WTCollection theCollection) throws WTException, WTPropertyVetoException {
-		// Make sure the args are not null or nothing
-		Iterator<?> theIterator = null;
-		if (thePart == null || theCollection == null) {
-			// TODO Create an excetpion... I mean who is going to call this with both being
-			// null or empty
-			return;
-		} else {
-			if (theCollection.size() > 0) {
-				// TODO Create an exception. Not sure why the collection would ever be empty and
-				// this still works
-				theIterator = theCollection.iterator();
-			}
-		}
-		String version = VersionControlHelper.getIterationDisplayIdentifier(thePart).getLocalizedMessage(Locale.US);
-		String version2 = null;
-		//WTPart theWorkingPart = (WTPart) WorkInProgressHelper.service.workingCopyOf(thePart);
-		WTPart theWorkingPart = thePart;
-		Transaction transaction = new Transaction();
-		transaction.start();
-		PersistenceServerHelper.manager.lock(thePart, true);
+	public static WTDocument getLatestDocumentByNumber(String number) {
+		WTDocument result = null;
+		try {
+			if (StringUtils.isNotBlank(number)) {
 
-		do {
-			WTDocument thisDocument = null;
-			if (!theIterator.hasNext()) {
-				break;
-			}
-			Object tmp = (Object) theIterator.next();
-			thisDocument = getDocumentFromCollection(tmp);
-			WTPartDescribeLink theLnk = WTPartDescribeLink.newWTPartDescribeLink(thePart, thisDocument);
-			WTPartDescribeLink theWorkingLnk = WTPartDescribeLink.newWTPartDescribeLink(theWorkingPart, thisDocument);
-			System.out.println("NUCLEUS!!  Handling document number: " + thisDocument.getNumber());
-			QueryResult qr = intGetDescribeAssociations(thePart, (WTDocumentMaster) thisDocument.getMaster());
-			if (qr.size() > 0) {
-				System.out.println("Already has linked docs");
-				WTDocument existing = theLnk.getDescribedBy();
-				WTPart pt = (WTPart) VersionControlHelper.service.getLatestIteration(thePart, false);
-				version2 = VersionControlHelper.getIterationDisplayIdentifier(thePart).getLocalizedMessage(Locale.US);
-				if (PersistenceHelper.isEquivalent(thisDocument, existing)) {
-					if (transaction != null) {
-						transaction.rollback();
-						transaction = null;
+				WTDocumentMaster master = DocumentUtility.getDocumentMaster(number);
+				QueryResult qr = VersionControlHelper.service.allIterationsOf(master);
+				if (qr.hasMoreElements()) {
+					qr = VersionControlHelper.service.allIterationsOf(master);
+					if (qr.hasMoreElements()) {
+						result = (WTDocument) qr.nextElement();
 					}
-					return;
 				}
-				
-				pt = (WTPart) WorkInProgressHelper.service.checkout(pt, WorkInProgressHelper.service.getCheckoutFolder(),"").getWorkingCopy();
-				WTPartDescribeLink tw = WTPartDescribeLink.newWTPartDescribeLink(pt, thisDocument);
-				PersistenceServerHelper.manager.lock(pt, true);
-				PersistenceHelper.manager.store(tw);
-				WorkInProgressHelper.service.checkin(pt,"Material Specification processed");
 			}
-			else
+		} catch (WTException e) {
+			logger.error(CLASSNAME + ".getDocumentByNumber:" + e);
+		}
+		return result;
+	}
+	
+	public static WTDocumentMaster getDocumentMaster(String number)
+	{
+		WTDocumentMaster result = null;
+		try {
+			if (StringUtils.isNotBlank(number))
 			{
-				WTPart pt = (WTPart) VersionControlHelper.service.getLatestIteration(thePart, false);
-				pt = (WTPart) WorkInProgressHelper.service.checkout(pt, WorkInProgressHelper.service.getCheckoutFolder(),"").getWorkingCopy();
-				WTPartDescribeLink tw = WTPartDescribeLink.newWTPartDescribeLink(pt, thisDocument);
-				PersistenceServerHelper.manager.insert(tw);
-				WorkInProgressHelper.service.checkin(pt,"Material Specification processed");
+				QuerySpec qs = new QuerySpec(WTDocumentMaster.class);
+				SearchCondition scnumber = new SearchCondition(WTDocumentMaster.class, WTDocumentMaster.NUMBER, SearchCondition.EQUAL, number.toUpperCase());
+				qs.appendWhere(scnumber, new int[] { 0 });
+				QueryResult qr = PersistenceHelper.manager.find((StatementSpec) qs);
+				
+				//TODO need to handle in the unlikely event that more than one master is present.  Cuz it shouldn't
+				if (qr.hasMoreElements()) {
+					result = (WTDocumentMaster) qr.nextElement();
+				}
 			}
-
-		} while (true);
-		transaction.commit();
-		transaction = null;
+		} catch (WTException e) {
+			logger.error(CLASSNAME+".getDocumentByNumber:" + e);
+		} 
+		return result;
 	}
 	
 	private static WTDocument getDocumentFromCollection(Object obj)
@@ -139,7 +107,7 @@ public class DocumentUtil {
 	public static void removeDependencyLink(WTDocument doc) throws WTException {
 		try {
 			if (!RemoteMethodServer.ServerFlag) {
-				RemoteMethodServer.getDefault().invoke("removeDependencyLink", DocumentUtil.class.getName(), null,
+				RemoteMethodServer.getDefault().invoke("removeDependencyLink", DocumentUtility.class.getName(), null,
 						new Class[] { String.class }, new Object[] {});
 			} else {
 				boolean enforce = SessionServerHelper.manager.setAccessEnforced(false);
@@ -201,7 +169,7 @@ public class DocumentUtil {
 	    try {
 			if (!RemoteMethodServer.ServerFlag) {
 						return (QueryResult) RemoteMethodServer.getDefault().invoke("intGetDescribeAssociations", 
-								DocumentUtil.class.getName(), null, new Class[] { WTPart.class,WTDocumentMaster.class},
+								DocumentUtility.class.getName(), null, new Class[] { WTPart.class,WTDocumentMaster.class},
 								new Object[] { wtpart,wtdocumentmaster });
 			} else {
 				boolean enforce = SessionServerHelper.manager.setAccessEnforced(false);
