@@ -4,5 +4,4 @@ defaultVariables=
 eclipse.preferences.version=1
 includeTeamPrivateFiles=false
 map|0=src|,|,|,|,
-map|1=WindAPIUtil/bin|,|,|,|,
 useCurrentDateForDestinationFiles=false
