@@ -2,11 +2,6 @@ package com.tristar.wind.util;
 
 import java.lang.reflect.InvocationTargetException;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Locale;
 import java.util.Vector;
 
 import org.apache.commons.lang.StringUtils;
@@ -15,7 +10,7 @@ import org.apache.log4j.Logger;
 import wt.doc.WTDocument;
 import wt.doc.WTDocumentDependencyLink;
 import wt.doc.WTDocumentMaster;
-import wt.fc.ObjectIdentifier;
+import wt.doc._WTDocumentMaster;
 import wt.fc.ObjectReference;
 import wt.fc.ObjectSetVector;
 import wt.fc.ObjectToObjectLink;
@@ -23,21 +18,15 @@ import wt.fc.PersistenceHelper;
 import wt.fc.PersistenceServerHelper;
 import wt.fc.QueryResult;
 import wt.fc.ReferenceFactory;
-import wt.fc.WTReference;
-import wt.fc.collections.WTArrayList;
-import wt.fc.collections.WTCollection;
 import wt.log4j.LogR;
 import wt.method.RemoteMethodServer;
 import wt.part.WTPart;
 import wt.part.WTPartDescribeLink;
 import wt.pds.StatementSpec;
-import wt.pom.PersistenceException;
-import wt.pom.Transaction;
 import wt.query.QuerySpec;
 import wt.query.SearchCondition;
 import wt.session.SessionServerHelper;
 import wt.util.WTException;
-import wt.util.WTPropertyVetoException;
 import wt.util.WTRuntimeException;
 import wt.vc.VersionControlHelper;
 import wt.vc.wip.WorkInProgressHelper;
@@ -76,7 +65,7 @@ public class DocumentUtility {
 			if (StringUtils.isNotBlank(number))
 			{
 				QuerySpec qs = new QuerySpec(WTDocumentMaster.class);
-				SearchCondition scnumber = new SearchCondition(WTDocumentMaster.class, WTDocumentMaster.NUMBER, SearchCondition.EQUAL, number.toUpperCase());
+				SearchCondition scnumber = new SearchCondition(WTDocumentMaster.class, _WTDocumentMaster.NUMBER, SearchCondition.EQUAL, number.toUpperCase());
 				qs.appendWhere(scnumber, new int[] { 0 });
 				QueryResult qr = PersistenceHelper.manager.find((StatementSpec) qs);
 				
@@ -190,7 +179,7 @@ public class DocumentUtility {
 					WTPartDescribeLink wtpartdescribelink;
 					try {
 						for (; queryresult1.hasMoreElements(); vector.add(wtpartdescribelink)) {
-							Object aobj[] = (Object[]) (Object[]) queryresult1.nextElement();
+							Object aobj[] = (Object[]) queryresult1.nextElement();
 							wtpartdescribelink = (WTPartDescribeLink) aobj[0];
 								wtpartdescribelink.setDescribes(wtpart);
 								wtpartdescribelink.setDescribedBy((WTDocument) aobj[1]);

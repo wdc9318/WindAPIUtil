@@ -1,9 +1,6 @@
 package com.tristar.wind.util;
 
 import java.beans.PropertyVetoException;
-import java.lang.reflect.InvocationTargetException;
-import java.rmi.RemoteException;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
@@ -16,8 +13,6 @@ import wt.epm.EPMDocument;
 import wt.fc.QueryResult;
 import wt.fc.WTObject;
 import wt.log4j.LogR;
-import wt.method.RemoteMethodServer;
-import wt.session.SessionServerHelper;
 import wt.util.WTException;
 
 public class ContentUtility {
@@ -49,10 +44,10 @@ public class ContentUtility {
 			if (StringUtils.isEmpty(fileName) && obj != null) {
 				if (obj instanceof WTDocument) {
 					WTDocument wtdocument = (WTDocument) obj;
-					contentHolder = ContentHelper.service.getContents((ContentHolder) wtdocument);
+					contentHolder = ContentHelper.service.getContents(wtdocument);
 				} else if (obj instanceof EPMDocument) {
 					EPMDocument epm = (EPMDocument) obj;
-					contentHolder = ContentHelper.service.getContents((ContentHolder) epm);
+					contentHolder = ContentHelper.service.getContents(epm);
 				}
 				QueryResult qr = ContentHelper.service.getContentsByRole(contentHolder, ContentRoleType.SECONDARY);
 				while (qr.hasMoreElements()) {
